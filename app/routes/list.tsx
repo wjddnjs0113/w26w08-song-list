@@ -1,8 +1,7 @@
-import type { Route } from "./+types/list";
-import { useLoaderData } from 'react-router'
-import type { User, Session } from '@supabase/supabase-js'
+import { useLoaderData, useNavigate, Link  } from 'react-router'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from "~/lib/auth-store";
+import type { Route } from "./+types/list";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -42,24 +41,51 @@ export async function clientLoader() {
   return { songs: data }
 }
 
+// 로딩 화면. HydrateFallback 이름 정해져 있음
+export function HydrateFallback() {
+  return <div>로그인 세션 연결 중...</div>
+}
+
+// 오류 화면. ErrorBoundary 이름 정해져 있음
+export function ErrorBoundary() {
+  return <div>오류 발생</div>
+}
+
 export default function List() {
   const { songs } = useLoaderData<typeof clientLoader>()
   const user = useAuthStore(s => s.user)
+  const navigate = useNavigate()
 
   return (
     <div>
       <h2>애창곡 리스트 {user && `(${user.email})`}</h2>
-      {songs.length === 0 ? (
-        <p>등록된 노래가 없거나 데이터를 불러오지 못했습니다.</p>
+      
+      {user ? (
+        <div>
+          <button 
+            onClick={ async () => {
+              await useAuthStore.getState().signOut()
+              // alert("로그아웃")
+              navigate('/')
+            }}>
+            로그아웃
+          </button>
+
+          {songs.length === 0 ? (
+            <p>등록된 노래가 없거나 데이터를 불러오지 못했습니다.</p>
+          ) : (
+            <ul>
+              {songs.map((song: any) => (
+                <li key={song.id}>
+                  <strong>{song.title}</strong> - {song.artist || '(가수 없음)'}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       ) : (
-        <ul>
-          {songs.map((song: any) => (
-            <li key={song.id}>
-              <strong>{song.title}</strong> - {song.artist || '(가수 없음)'}
-            </li>
-          ))}
-        </ul>
-      )}
+        <Link to="/login">로그인</Link>
+      )}     
     </div>
   )
 }
